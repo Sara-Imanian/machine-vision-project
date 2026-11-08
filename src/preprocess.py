@@ -54,10 +54,34 @@ def extract_shape_features(contour):
     return features
 
 
+def extract_color_features(img, mask, bins=8):
+    hsv = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
+
+    h_hist = cv2.calcHist([hsv], [0], mask, [bins], [0,180])
+    s_hist = cv2.calcHist([hsv], [1], mask, [bins], [0,256])
+    v_hist = cv2.calcHist([hsv], [2], mask, [bins], [0,256])
+
+    hist = np.concatenate([h_hist, s_hist, v_hist]).flatten()
+    hist = hist / (hist.sum() + 1e-12)
+
+    return hist
 
 
+def extract_texture_features(gray, mask):
+    mean, std = cv2.meanStdDev(gray, mask=mask)
+
+    lap = cv2.Laplacian(gray, cv2.CV_64F)
+    lap_var = lap[mask > 0].var()
+
+    return np.array([mean[0][0], std[0][0], lap_var])
 
 
+def extract_all_features(img, gray, mask, contour): 
+    shape = extract_shape_features(contour)
+    color = extract_color_features(img, mask)
+    texture = extract_texture_features(gray, mask)
+
+    return np.concatenate([shape, color, texture])
 
 
 
@@ -83,7 +107,9 @@ if __name__ == "__main__" :
 
     features = extract_shape_features(contour)
 
+    features = extract_all_features(img, gray, mask, contour)
+
 np.set_printoptions(precision=3, suppress=True)
-print(features)
+print(features.shape)
 
 # print(img.shape)
